@@ -4,9 +4,6 @@ const app = express();
 const indexRoute = require('./Routes/index');
 const usersRoute = require('./Routes/users');
 
-app.use('/', indexRoute);
-app.use('/users', usersRoute);
-
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 
@@ -38,6 +35,9 @@ mongoose.connection.on('disconnected', () => {
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+app.use('/', indexRoute);
+app.use('/users', usersRoute);
 
 app.listen(3000);
 
