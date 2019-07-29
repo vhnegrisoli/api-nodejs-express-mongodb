@@ -11,80 +11,75 @@ const USER_NOT_EXISTS_MESSAGE = 'Esse usuário não existe.';
 const NOT_ENOUGH_FIELDS_MESSAGE = 'Por favor, informe todos os campos.';
 const WRONG_PASSWORD_MESSAGE = 'Senha inválida.';
 
-router.get('/all', (req, res) => {
-    User.find({}, (error, data) => {
-        if (error) {
-            return res.send({ error: USERS_ERROR_MESSAGE });
-        }
-        return res.send(data);
-    });
+router.get('/all', async (req, res) => {
+    try {
+        const users = await User.find({});
+        return res.send(users);
+    } catch (error) {
+        return res.send({ error: USERS_ERROR_MESSAGE });
+    }
+
 });
 
-router.post('/create', (req, res) => {
+router.post('/create', async (req, res) => {
     const request = req.body;
-    const { email, password } = request;
-    if (!email || !password) {
+    const { email, password, name } = request;
+    if (!email || !password || !name) {
         return res.send({ error: NOT_ENOUGH_FIELDS_MESSAGE });
     }
-    User.findOne({ email }, (error, data) => {
-        if (error) {
-            return res.send({ error: USER_NOT_FOUND_MESSAGE });
-        }
-        if (data) {
+    try {
+        if (await User.findOne({ email })) {
             return res.send({ message: USER_EXISTS_MESSAGE });
         }
-    });
-    User.create(request, (error, data) => {
-        if (error) {
-            return res.send({ error: USER_NOT_CREATED_MESSAGE });
-        }
-        data.password = undefined
-        return res.send(data)
-    });
+        const user = await User.create(request);
+        user.password = undefined;
+        return res.send(user);
+    } catch (error) {
+        return res.send({ error: USER_NOT_CREATED_MESSAGE });
+    }
 });
 
 // Controller utilizando URI Param
-router.get('/find/:email', (req, res) => {
+router.get('/find/:email', async (req, res) => {
     const { email } = req.params;
-    User.findOne({ email }, (error, data) => {
-        if (error) {
-            return res.send({ error: USER_NOT_FOUND_MESSAGE });
-        }
-        return res.send(data);
-    });
+    try {
+        const user = await User.findOne({ email });
+        return res.send(user);
+    } catch (error) {
+        return res.send({ error: USER_NOT_FOUND_MESSAGE });
+    }
 });
 
 // Controller utilizando Query Param
-router.get('/find', (req, res) => {
+router.get('/find', async (req, res) => {
     const { email } = req.query;
-    User.findOne({ email }, (error, data) => {
-        if (error) {
-            return res.send({ error: USER_NOT_FOUND_MESSAGE });
-        }
-        return res.send(data);
-    });
+    try {
+        const user = await User.findOne({ email });
+        return res.send(user);
+    } catch (error) {
+        return res.send({ error: USER_NOT_FOUND_MESSAGE });
+    }
 });
 
-router.post('/auth', (req, res) => {
+router.post('/auth', async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) {
         return res.send({ error: NOT_ENOUGH_FIELDS_MESSAGE });
     }
-    User.findOne({ email }, (error, data) => {
-        if (error) {
-            return res.send({ error: USER_NOT_FOUND_MESSAGE });
-        }
-        if (!data) {
+    try {
+        const user = await User.findOne({ email }).select('+password');
+        if (!user) {
             return res.send({ error: USER_NOT_EXISTS_MESSAGE });
         }
-        bcrypt.compare(password, data.password, (error, same) => {
-            if (!same) {
-                return res.send({ error: WRONG_PASSWORD_MESSAGE })
-            }
-            data.password = undefined
-            return res.send(data);
-        });
-    }).select('+password')
+        const password_ok = await bcrypt.compare(password, user.password);
+        if (!password_ok) {
+            return res.send({ error: WRONG_PASSWORD_MESSAGE });
+        }
+        user.password = undefined;
+        return res.send(user);
+    } catch (error) {
+        return res.send({ error: USER_NOT_FOUND_MESSAGE });
+    }
 });
 
 module.exports = router;
