@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../model/user');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
 const USERS_ERROR_MESSAGE = 'Erro ao  buscar os usuários.';
 const USER_NOT_FOUND_MESSAGE = 'Erro ao  buscar o usuário.';
@@ -10,6 +11,11 @@ const USER_EXISTS_MESSAGE = 'Esse usuário já existe.';
 const USER_NOT_EXISTS_MESSAGE = 'Esse usuário não existe.';
 const NOT_ENOUGH_FIELDS_MESSAGE = 'Por favor, informe todos os campos.';
 const WRONG_PASSWORD_MESSAGE = 'Senha inválida.';
+const APP_SECRET = 'user_password_jwt_123456';
+
+const createUserToken = (userId) => {
+    return jwt.sign({ id: userId }, APP_SECRET, { expiresIn: '7d' });
+}
 
 router.get('/all', async (req, res) => {
     try {
@@ -33,7 +39,7 @@ router.post('/create', async (req, res) => {
         }
         const user = await User.create(request);
         user.password = undefined;
-        return res.send(user);
+        return res.send({ user, token: createUserToken(user.id), auth_data: res.auth_data });
     } catch (error) {
         return res.send({ error: USER_NOT_CREATED_MESSAGE });
     }
@@ -76,7 +82,7 @@ router.post('/auth', async (req, res) => {
             return res.send({ error: WRONG_PASSWORD_MESSAGE });
         }
         user.password = undefined;
-        return res.send(user);
+        return res.send({ user, token: createUserToken(user.id), auth_data: res.auth_data });
     } catch (error) {
         return res.send({ error: USER_NOT_FOUND_MESSAGE });
     }
